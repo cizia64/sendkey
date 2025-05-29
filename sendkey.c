@@ -1,21 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <fcntl.h>
+#include <linux/uinput.h>
+#include <unistd.h>
 #include <linux/input.h>
-#include <errno.h>
-#include <sys/time.h>
 
-// Correspondence table between names and codes
-struct key_entry {
+struct {
     const char *name;
     int code;
-};
-
-struct key_entry key_table[] = {
-    {"A", BTN_SOUTH},
-    {"B", BTN_EAST},
+} key_table[] = {
+    {"A", BTN_EAST},
+    {"B", BTN_SOUTH},
     {"X", BTN_WEST},
     {"Y", BTN_NORTH},
     {"MENU", BTN_MODE},
@@ -26,72 +22,69 @@ struct key_entry key_table[] = {
     {NULL, -1}
 };
 
-int get_key_code(const char *keyname) {
-    for (int i = 0; key_table[i].name != NULL; ++i) {
-        if (strcasecmp(keyname, key_table[i].name) == 0) {
+int get_key_code(const char *name) {
+    for (int i = 0; key_table[i].name != NULL; i++) {
+        if (strcasecmp(name, key_table[i].name) == 0) {
             return key_table[i].code;
         }
     }
-    // If it's a direct numeric code
-    if (keyname[0] >= '0' && keyname[0] <= '9')
-        return atoi(keyname);
-
-    fprintf(stderr, "Invalid key: %s\n", keyname);
     return -1;
 }
 
-int main(int argc, char *argv[])
-{
-    // Checking the number of arguments
-    if (argc < 4 || (argc - 2) % 2 != 0) {
+void send_event(int fd, int code, int value) {
+    struct input_event ev = {0};
+    gettimeofday(&ev.time, NULL);
+    ev.type = EV_KEY;
+    ev.code = code;
+    ev.value = value;
+    write(fd, &ev, sizeof(ev));
+
+    ev.type = EV_SYN;
+    ev.code = SYN_REPORT;
+    ev.value = 0;
+    write(fd, &ev, sizeof(ev));
+}
+
+int main(int argc, char *argv[]) {
+    if (argc < 3) {
         fprintf(stderr, "Usage: %s /dev/input/eventX [[KEY] [VALUE], ...]\n", argv[0]);
-        fprintf(stderr, "Exemple: %s /dev/input/event0 A 1 B 1 A 0 B 0\n", argv[0]);
+        fprintf(stderr, "Example: %s /dev/input/event0 A 1 B 1 A 0 B 0\n", argv[0]);
         return 1;
     }
 
-    // Input file (dev/input/eventX)
-    char *event_file = argv[1];
-
-    // Open input file
-    int input_fd = open(event_file, O_WRONLY);
+    const char *device = argv[1];
+    int input_fd = open(device, O_WRONLY);
     if (input_fd < 0) {
-        perror("Error opening input file");
+        perror("Failed to open input device");
         return 1;
     }
 
-    printf("Using %s to send events\n", event_file);
-
-    // Loop to process events
-    for (int i = 2; i < argc; i += 2) {
+    int i = 2;
+    while (i < argc) {
         int code = get_key_code(argv[i]);
-        int value = atoi(argv[i + 1]);
-
-        if (code == -1 || value < 0 || value > 2) {
-            fprintf(stderr, "Invalid event: %s %s\n", argv[i], argv[i+1]);
+        if (code == -1) {
+            fprintf(stderr, "Unknown key: %s\n", argv[i]);
+            i++;
             continue;
         }
 
-        struct input_event ev;
-        gettimeofday(&ev.time, NULL);
-        ev.type = EV_KEY;
-        ev.code = code;
-        ev.value = value;
-
-        // Write the event
-        if (write(input_fd, &ev, sizeof(ev)) < 0) {
-            perror("Error write()");
+        int value = 2; // Default: press and release
+        if (i + 1 < argc && strlen(argv[i + 1]) == 1 &&
+            (argv[i + 1][0] == '0' || argv[i + 1][0] == '1' || argv[i + 1][0] == '2')) {
+            value = atoi(argv[i + 1]);
+            i += 2;
+        } else {
+            i += 1;
         }
 
-        // Send synchronization event
-        struct input_event syn;
-        gettimeofday(&syn.time, NULL);
-        syn.type = EV_SYN;
-        syn.code = SYN_REPORT;
-        syn.value = 0;
-        write(input_fd, &syn, sizeof(syn));
+        if (value == 2) {
+            send_event(input_fd, code, 1);
+            send_event(input_fd, code, 0);
+        } else {
+            send_event(input_fd, code, value);
+        }
     }
 
-    // Close input file
     close(input_fd);
     return 0;
 }
