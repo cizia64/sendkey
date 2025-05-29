@@ -4,7 +4,7 @@ A lightweight C utility to simulate key presses, button input, and D-Pad/trigger
 
 Ideal for handhelds like the Trimui Smart Pro.
 
-I allows to send combo keys from command line.
+It allows to send combo keys from command line.
 
 ## Features
 
@@ -16,8 +16,8 @@ I allows to send combo keys from command line.
 
 | Name    | Linux Code         | Type     |
 |---------|--------------------|----------|
-| A       | `BTN_SOUTH`        | `EV_KEY` |
-| B       | `BTN_EAST`         | `EV_KEY` |
+| B       | `BTN_SOUTH`        | `EV_KEY` |
+| A       | `BTN_EAST`         | `EV_KEY` |
 | X       | `BTN_WEST`         | `EV_KEY` |
 | Y       | `BTN_NORTH`        | `EV_KEY` |
 | MENU    | `BTN_MODE`         | `EV_KEY` |

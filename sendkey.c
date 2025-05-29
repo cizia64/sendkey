@@ -69,8 +69,9 @@ void emit_syn(int fd) {
 
 int main(int argc, char *argv[]) {
     if (argc < 3) {
-        fprintf(stderr, "Usage: %s /dev/input/eventX [[KEY] [VALUE], ...]\n", argv[0]);
-        fprintf(stderr, "Example: %s /dev/input/event0 A 1 B 1 A 0 B 0\n", argv[0]);
+        fprintf(stderr, "\nSendkey Tool By Cizia.      https://github.com/cizia64/sendkey\n", argv[0]);
+        fprintf(stderr, "  Usage: %s /dev/input/eventX [[KEY] [VALUE], ...]\n", argv[0]);
+        fprintf(stderr, "  Example: %s /dev/input/event0 A 1 A 0 B 1 B 0\n\n", argv[0]);
         return 1;
     }
 
